@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -5,8 +7,13 @@ import torch
 from data.schemas import FUT_SUFFIX
 from einops import rearrange
 from sentence_transformers import SentenceTransformer
+from PIL import Image
+import requests
+from io import BytesIO
+import torchvision.transforms as transforms
+import torchvision.models as models
 from typing import List
-
+from tqdm import tqdm
 
 class PreprocessingMixin:
     @staticmethod
@@ -37,11 +44,64 @@ class PreprocessingMixin:
         return out
 
     @staticmethod
-    def _encode_text_feature(text_feat, model=None):
+    def _encode_text_feature(text_feat, model=None, device=None):
+        embeddings = None
+
         if model is None:
             model = SentenceTransformer('sentence-transformers/sentence-t5-xl')
+        if device is not None:
+            model = model.to(device)
+            text_feat = text_feat.to(device)
+
         embeddings = model.encode(sentences=text_feat, show_progress_bar=True, convert_to_tensor=True).cpu()
         return embeddings
+
+    @staticmethod
+    def _init_image_encoder(device: None):
+        model = models.resnet50(pretrained=True)
+        model = torch.nn.Sequential(*list(model.children())[:-1])
+        if device is not None:
+            model = model.to(device)
+        model.eval()
+        return model
+
+    @staticmethod
+    def _encode_images_future(image_urls, cache_dir, device: None):
+        transform = transforms.Compose(
+            [
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
+
+        os.makedirs(cache_dir, exist_ok=True)
+        image_encoder = PreprocessingMixin._init_image_encoder(device)
+        image_embeddings = []
+
+        with tqdm(total=len(image_urls), desc="embeding images") as pbar:
+            for i, url in enumerate(image_urls):
+                cache_path = os.path.join(cache_dir, f"img_emb_{i}.pt")
+                if os.path.exists(cache_path):
+                    embedding = torch.load(cache_path)
+                else:
+                    try:
+                        response = requests.get(url, timeout=10)
+                        img = Image.open(BytesIO(response.content)).convert("RGB")
+                        img_tensor = transform(img).unsqueeze(0)
+                        with torch.no_grad():
+                            if device is not None:
+                                img_tensor = img_tensor.to(device)
+                            embedding = image_encoder(img_tensor)
+                        torch.save(embedding, cache_path)
+                    except Exception as e:
+                        embedding = torch.zeros(1, 2048, 1, 1)
+                image_embeddings.append(embedding)
+                pbar.update(1)
+
+        return torch.stack(image_embeddings)
+
     
     @staticmethod
     def _rolling_window(group, features, window_size=200, stride=1):

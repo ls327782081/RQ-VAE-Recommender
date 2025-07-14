@@ -18,6 +18,8 @@ from typing import Callable
 from typing import List
 from typing import Optional
 
+import os
+
 
 def parse(path):
     g = gzip.open(path, 'r')
@@ -36,8 +38,10 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
         transform: Optional[Callable] = None,
         pre_transform: Optional[Callable] = None,
         force_reload: bool = False,
+        device: str = None,
     ) -> None:
         self.split = split
+        self.device = device
         super(AmazonReviews, self).__init__(
             root, transform, pre_transform, force_reload
         )
@@ -115,6 +119,9 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
             .fillna({"brand": "Unknown"})
         )
 
+        image_cache_dir = os.path.join(self.raw_dir, self.split, "image_cache")
+        item_img_emb = self._encode_images_future(item_data['imUrl'], image_cache_dir)
+
         sentences = item_data.apply(
             lambda row:
                 "Title: " +
@@ -127,8 +134,9 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
                 str(row["price"]) + "; ",
             axis=1
         )
+
         
-        item_emb = self._encode_text_feature(sentences)
+        item_emb = self._encode_text_feature(sentences, device = device)
         data['item'].x = item_emb
         data['item'].text = np.array(sentences)
 
@@ -138,6 +146,7 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
 
         self.save([data], self.processed_paths[0])
         
+
 
 
 

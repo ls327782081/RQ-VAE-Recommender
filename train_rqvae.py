@@ -20,6 +20,9 @@ from torch.utils.data import DataLoader
 from torch.utils.data import RandomSampler
 from tqdm import tqdm
 
+torch._dynamo.config.verbose = True  # 查看编译详情
+torch._dynamo.config.suppress_errors = True  # 出错时回退到解释执行
+
 
 @gin.configurable
 def train(
@@ -36,7 +39,7 @@ def train(
     amp=False,
     wandb_logging=False,
     do_eval=True,
-    force_dataset_process=False,
+    force_dataset_process=True,
     mixed_precision_type="fp16",
     gradient_accumulate_every=1,
     save_model_every=1000000,
