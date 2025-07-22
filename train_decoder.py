@@ -144,7 +144,7 @@ def train(
     tokenizer.precompute_corpus_ids(item_dataset)
     
     if push_vae_to_hf:
-        login()
+        login(key='f4ec81388d0501e3792b0b0d5677372bf3493102')
         tokenizer.rq_vae.push_to_hub(vae_hf_model_name)
     
     if model_type == ModelType.DECODER:
