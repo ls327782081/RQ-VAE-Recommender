@@ -120,7 +120,7 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
         )
 
         image_cache_dir = os.path.join(self.raw_dir, self.split, "image_cache")
-        item_img_emb = self._encode_images_future(item_data['imUrl'], image_cache_dir)
+        item_img_emb = self._encode_images_future(item_data['imUrl'], image_cache_dir, device=device)
 
         sentences = item_data.apply(
             lambda row:
@@ -136,7 +136,7 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
         )
 
         
-        item_emb = self._encode_text_feature(sentences, device = device)
+        item_emb = self._encode_text_feature(sentences, device=device)
         data['item'].x = item_emb
         data['item'].text = np.array(sentences)
 
