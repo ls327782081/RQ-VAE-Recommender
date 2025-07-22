@@ -119,8 +119,8 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
             .fillna({"brand": "Unknown"})
         )
 
-        image_cache_dir = os.path.join(self.raw_dir, self.split, "image_cache")
-        item_img_emb = self._encode_images_future(item_data['imUrl'], image_cache_dir, device=self.device)
+        # image_cache_dir = os.path.join(self.raw_dir, self.split, "image_cache")
+        # item_img_emb = self._encode_images_future(item_data['imUrl'], image_cache_dir, device=self.device)
 
         sentences = item_data.apply(
             lambda row:
