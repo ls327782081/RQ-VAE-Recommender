@@ -102,7 +102,7 @@ def train(
     )
 
     if wandb_logging and accelerator.is_main_process:
-        wandb.login()
+        wandb.login(key='f4ec81388d0501e3792b0b0d5677372bf3493102')
         run = wandb.init(
             project="rq-vae-training",
             config=params
